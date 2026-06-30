@@ -15,6 +15,20 @@ LAMBDA_URL = f"http://127.0.0.1:{LAMBDA_PORT}/2015-03-31/functions/{FUNCTION_NAM
 app = Flask(__name__)
 
 
+@app.after_request
+def add_cors_headers(response):
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET,POST,PUT,DELETE,OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type,Authorization,X-Requested-With"
+    return response
+
+
+@app.route("/", methods=["OPTIONS"])
+@app.route("/<path:path>", methods=["OPTIONS"])
+def preflight(path=""):
+    return "", 204
+
+
 @app.route("/", methods=["POST", "GET", "PUT", "DELETE"])
 @app.route("/<path:path>", methods=["POST", "GET", "PUT", "DELETE"])
 def proxy(path=""):

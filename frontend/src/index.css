@@ -313,6 +313,24 @@ button {
   color: var(--red);
 }
 
+.btn-copy {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-3);
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+.btn-copy:hover {
+  border-color: var(--border);
+  background: var(--surface-hi);
+  color: var(--text-2);
+}
+
 /* ── tabs ────────────────────────────────────────────── */
 .tab-bar {
   display: flex;
