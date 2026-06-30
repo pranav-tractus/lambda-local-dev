@@ -3,6 +3,7 @@ import json
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi.testclient import TestClient
+from httpx import AsyncClient, ASGITransport
 
 def test_get_services_returns_list(tmp_path, monkeypatch):
     services_data = {
@@ -124,3 +125,28 @@ def test_kill_ports_known_service_returns_ok(monkeypatch, tmp_path):
         resp = client.post("/api/services/email-bot/kill-ports")
     assert resp.status_code == 200
     assert resp.json()["ok"] is True
+
+
+@pytest.mark.anyio
+async def test_kill_ports_logs_emitted(monkeypatch, tmp_path):
+    _setup_files(tmp_path, monkeypatch)
+    import importlib, sys
+    sys.modules.pop("server", None)
+    import server
+    importlib.reload(server)
+
+    async def async_lines():
+        yield b"killed port 3001 8080\n"
+
+    async def fake_exec(*args, **kwargs):
+        mock_proc = AsyncMock()
+        mock_proc.stdout = async_lines()
+        mock_proc.wait = AsyncMock(return_value=0)
+        return mock_proc
+
+    with patch("asyncio.create_subprocess_exec", side_effect=fake_exec):
+        async with AsyncClient(transport=ASGITransport(app=server.app), base_url="http://test") as ac:
+            resp = await ac.post("/api/services/email-bot/kill-ports")
+        await asyncio.sleep(0)  # drain inside the patch so the background task runs with the mock
+    assert resp.status_code == 200
+    assert {"process": "build", "line": "killed port 3001 8080"} in list(server.LOG_BUFFER["email-bot"])
