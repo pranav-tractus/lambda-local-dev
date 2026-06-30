@@ -110,10 +110,12 @@ def test_kill_ports_known_service_returns_ok(monkeypatch, tmp_path):
     import server
     importlib.reload(server)
 
+    async def async_lines():
+        yield b"killed port 3001 8080\n"
+
     async def fake_exec(*args, **kwargs):
         mock_proc = AsyncMock()
-        mock_proc.stdout = AsyncMock()
-        mock_proc.stdout.__aiter__ = lambda self: iter([b"killed port 3001 8080\n"])
+        mock_proc.stdout = async_lines()
         mock_proc.wait = AsyncMock(return_value=0)
         return mock_proc
 

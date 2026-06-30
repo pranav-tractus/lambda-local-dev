@@ -70,6 +70,7 @@ export default function ServiceCard({ service, onStart, onStop, onRestart, onBui
             {status === "building" ? "Building…" : "Build"}
           </button>
           <button className="btn btn-danger" disabled={disabled} onClick={onClean}>Clean</button>
+          {/* always enabled — recovery action, must work even when service is broken */}
           <button className="btn btn-danger" onClick={onKillPorts}>Kill Ports</button>
         </div>
 

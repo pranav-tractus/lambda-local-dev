@@ -259,14 +259,21 @@ async def kill_ports(name: str):
     proxy_port = svc["proxy_port"]
 
     async def _run_kill():
-        proc = await asyncio.create_subprocess_exec(
-            "npx", "kill-port", str(sam_port), str(proxy_port),
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
-        )
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "npx", "kill-port", str(sam_port), str(proxy_port),
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+            )
+        except FileNotFoundError:
+            msg = {"process": "build", "line": "[kill-ports] error: npx not found on PATH"}
+            LOG_BUFFER[name].append(msg)
+            for q in list(LOG_QUEUES[name]):
+                await q.put(msg)
+            return
         async for line in proc.stdout:
             text = line.decode("utf-8", errors="replace").rstrip()
-            msg = {"process": "sam", "line": text}
+            msg = {"process": "build", "line": text}
             LOG_BUFFER[name].append(msg)
             for q in list(LOG_QUEUES[name]):
                 await q.put(msg)
