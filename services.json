@@ -1,0 +1,41 @@
+{
+  "services": [
+    {
+      "name": "email-bot",
+      "sam_port": 3001,
+      "proxy_port": 8080,
+      "function_name": "FunctionImp"
+    },
+    {
+      "name": "template-handler",
+      "sam_port": 3002,
+      "proxy_port": 8081,
+      "function_name": "FunctionImp"
+    },
+    {
+      "name": "generate-contract",
+      "sam_port": 3003,
+      "proxy_port": 8082,
+      "function_name": "FunctionImp"
+    },
+    {
+      "name": "send-notification",
+      "sam_port": 3004,
+      "proxy_port": 8083,
+      "function_name": "FunctionImp"
+    },
+    {
+      "name": "utils",
+      "sam_port": 3005,
+      "proxy_port": 8084,
+      "function_name": "FunctionImp"
+    },
+    {
+      "name": "metal-data-processing",
+      "sam_port": 3006,
+      "proxy_port": 8085,
+      "function_name": "FunctionImpl",
+      "sam_extra_args": "--parameter-overrides EnvType=dev"
+    }
+  ]
+}
