@@ -90,3 +90,35 @@ def test_websocket_log_replay(monkeypatch, tmp_path):
     with client.websocket_connect("/ws/logs/email-bot") as ws:
         msg = ws.receive_json()
         assert msg == {"process": "sam", "line": "hello"}
+
+
+def test_kill_ports_unknown_service_returns_404(monkeypatch, tmp_path):
+    _setup_files(tmp_path, monkeypatch)
+    import importlib, sys
+    sys.modules.pop("server", None)
+    import server
+    importlib.reload(server)
+    client = TestClient(server.app)
+    resp = client.post("/api/services/nonexistent/kill-ports")
+    assert resp.status_code == 404
+
+
+def test_kill_ports_known_service_returns_ok(monkeypatch, tmp_path):
+    _setup_files(tmp_path, monkeypatch)
+    import importlib, sys
+    sys.modules.pop("server", None)
+    import server
+    importlib.reload(server)
+
+    async def fake_exec(*args, **kwargs):
+        mock_proc = AsyncMock()
+        mock_proc.stdout = AsyncMock()
+        mock_proc.stdout.__aiter__ = lambda self: iter([b"killed port 3001 8080\n"])
+        mock_proc.wait = AsyncMock(return_value=0)
+        return mock_proc
+
+    with patch("asyncio.create_subprocess_exec", side_effect=fake_exec):
+        client = TestClient(server.app)
+        resp = client.post("/api/services/email-bot/kill-ports")
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True

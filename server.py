@@ -249,6 +249,33 @@ async def clean_service(name: str):
     return {"ok": True}
 
 
+@app.post("/api/services/{name}/kill-ports")
+async def kill_ports(name: str):
+    svc = _find_service(name)
+    if not svc:
+        return JSONResponse({"error": f"Unknown service: {name}"}, status_code=404)
+
+    sam_port = svc["sam_port"]
+    proxy_port = svc["proxy_port"]
+
+    async def _run_kill():
+        proc = await asyncio.create_subprocess_exec(
+            "npx", "kill-port", str(sam_port), str(proxy_port),
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+        )
+        async for line in proc.stdout:
+            text = line.decode("utf-8", errors="replace").rstrip()
+            msg = {"process": "sam", "line": text}
+            LOG_BUFFER[name].append(msg)
+            for q in list(LOG_QUEUES[name]):
+                await q.put(msg)
+        await proc.wait()
+
+    asyncio.create_task(_run_kill())
+    return {"ok": True}
+
+
 @app.websocket("/ws/logs/{name}")
 async def ws_logs(websocket: WebSocket, name: str):
     await websocket.accept()
