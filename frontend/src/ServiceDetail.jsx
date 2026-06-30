@@ -23,7 +23,7 @@ function LogPanel({ label, lines }) {
   );
 }
 
-export default function ServiceDetail({ service, onBack, onStart, onStop, onRestart, onBuild, onClean }) {
+export default function ServiceDetail({ service, onBack, onStart, onStop, onRestart, onBuild, onClean, onKillPorts }) {
   const { name, sam_port, proxy_port, status, tunnel_url } = service;
   const [logs, setLogs] = useState({ sam: [], proxy: [], tunnel: [], build: [] });
   const disabled = status === "building";
@@ -82,6 +82,7 @@ export default function ServiceDetail({ service, onBack, onStart, onStop, onRest
           {status === "building" ? "Building…" : "Build"}
         </button>
         <button className="btn btn-danger" disabled={disabled} onClick={onClean}>Clean</button>
+        <button className="btn btn-danger" onClick={onKillPorts}>Kill Ports</button>
       </div>
 
       <div className="detail-log-grid">

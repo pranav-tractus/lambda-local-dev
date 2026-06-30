@@ -48,6 +48,7 @@ export default function App() {
         onRestart={() => action(focusedSvc.name, "restart")}
         onBuild={() => action(focusedSvc.name, "build")}
         onClean={() => action(focusedSvc.name, "clean")}
+        onKillPorts={() => action(focusedSvc.name, "kill-ports")}
       />
     );
   }
@@ -71,6 +72,7 @@ export default function App() {
             onRestart={() => action(svc.name, "restart")}
             onBuild={() => action(svc.name, "build")}
             onClean={() => action(svc.name, "clean")}
+            onKillPorts={() => action(svc.name, "kill-ports")}
             onFocus={() => setFocusedService(svc.name)}
           />
         ))}
