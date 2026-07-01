@@ -1,7 +1,7 @@
 import React from "react";
 import { Copy } from "lucide-react";
 
-export const CopyIcon = () => <Copy />;
+export const CopyIcon = () => <Copy size={12} strokeWidth={1.75} />;
 
 export const ExpandIcon = () => (
     <svg width="11" height="11" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">

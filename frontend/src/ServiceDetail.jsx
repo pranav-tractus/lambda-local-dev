@@ -68,7 +68,7 @@ export default function ServiceDetail({ service, onBack, onStart, onStop, onRest
           <a href={tunnel_url} target="_blank" rel="noreferrer" className="tunnel-link" style={{ fontSize: 12 }}>
             {tunnel_url}
           </a>
-          <button className="btn-copy" onClick={() => navigator.clipboard.writeText(tunnel_url)} title="Copy tunnel URL">
+          <button className="btn-copy" onClick={() => navigator.clipboard.writeText(tunnel_url)} title="Copy tunnel URL" aria-label="Copy tunnel URL">
             <CopyIcon />
           </button>
         </div>

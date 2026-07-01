@@ -38,7 +38,7 @@ export default function ServiceCard({ service, onStart, onStop, onRestart, onBui
             <span className="card-ports">:{sam_port} / :{proxy_port}</span>
           </div>
           <div className="card-header-right">
-            <button className="btn-expand" onClick={onFocus} title="Open detail view">
+            <button className="btn-expand" onClick={onFocus} title="Open detail view" aria-label="Open detail view">
               <ExpandIcon />
             </button>
             <span className={`status-badge ${status}`}>
@@ -54,7 +54,7 @@ export default function ServiceCard({ service, onStart, onStop, onRestart, onBui
               <a href={tunnel_url} target="_blank" rel="noreferrer" className="tunnel-link">
                 {tunnel_url}
               </a>
-              <button className="btn-copy" onClick={() => navigator.clipboard.writeText(tunnel_url)} title="Copy tunnel URL">
+              <button className="btn-copy" onClick={() => navigator.clipboard.writeText(tunnel_url)} title="Copy tunnel URL" aria-label="Copy tunnel URL">
                 <CopyIcon />
               </button>
             </div>
