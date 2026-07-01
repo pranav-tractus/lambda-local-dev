@@ -6,3 +6,8 @@ __pycache__/
 
 node_modules/
 dist/
+
+.claude/
+.superpowers/
+.pytest_cache/
+venv/
