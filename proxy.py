@@ -61,7 +61,7 @@ def proxy(path=""):
     }
 
     try:
-        response = requests.post(LAMBDA_URL, json=event, timeout=30)
+        response = requests.post(LAMBDA_URL, json=event, timeout=90)
         result = response.json()
 
         if "statusCode" in result:
