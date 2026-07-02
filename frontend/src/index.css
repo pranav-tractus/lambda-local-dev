@@ -482,19 +482,7 @@ button {
   margin-bottom: 20px;
 }
 
-/* ── 4-panel log grid ────────────────────────────────── */
-.detail-log-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-@media (max-width: 700px) {
-  .detail-log-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
+/* ── tabbed log panel ────────────────────────────────── */
 .detail-log-panel {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -504,20 +492,14 @@ button {
   flex-direction: column;
 }
 
-.detail-log-label {
-  padding: 6px 12px 5px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  color: var(--text-2);
-  background: var(--surface-hi);
+.detail-log-panel .tab-bar {
+  border-top: none;
   border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
+  background: var(--surface-hi);
 }
 
 .detail-log-pane {
-  height: clamp(200px, calc((100vh - 420px) / 2), 420px);
+  height: clamp(280px, calc(100vh - 420px), 560px);
   overflow-y: auto;
   background: #050710;
   padding: 8px 12px;

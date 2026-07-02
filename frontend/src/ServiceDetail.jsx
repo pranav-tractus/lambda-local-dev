@@ -1,31 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import { CopyIcon } from "./components/icons";
 
-const PROCESSES = ["sam", "proxy", "tunnel", "build"];
-
-function LogPanel({ label, lines }) {
-  const ref = useRef(null);
-
-  useEffect(() => {
-    if (ref.current) ref.current.scrollTop = ref.current.scrollHeight;
-  }, [lines]);
-
-  return (
-    <div className="detail-log-panel">
-      <div className="detail-log-label">{label}</div>
-      <div ref={ref} className="detail-log-pane">
-        {lines.length === 0
-          ? <span className="log-empty">— no output —</span>
-          : lines.map((line, i) => <div key={i} className="log-line">{line}</div>)
-        }
-      </div>
-    </div>
-  );
-}
+const TABS = ["sam", "proxy", "tunnel", "build"];
 
 export default function ServiceDetail({ service, onBack, onStart, onStop, onRestart, onBuild, onClean, onKillPorts }) {
   const { name, sam_port, proxy_port, status, tunnel_url } = service;
+  const [activeTab, setActiveTab] = useState("sam");
   const [logs, setLogs] = useState({ sam: [], proxy: [], tunnel: [], build: [] });
+  const logRef = useRef(null);
   const disabled = status === "building";
 
   useEffect(() => {
@@ -40,6 +22,10 @@ export default function ServiceDetail({ service, onBack, onStart, onStop, onRest
     };
     return () => ws.close();
   }, [name]);
+
+  useEffect(() => {
+    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
+  }, [logs, activeTab]);
 
   return (
     <div className="app">
@@ -86,10 +72,24 @@ export default function ServiceDetail({ service, onBack, onStart, onStop, onRest
         <button className="btn btn-danger" onClick={onKillPorts}>Kill Ports</button>
       </div>
 
-      <div className="detail-log-grid">
-        {PROCESSES.map((p) => (
-          <LogPanel key={p} label={p} lines={logs[p]} />
-        ))}
+      <div className="detail-log-panel">
+        <div className="tab-bar">
+          {TABS.map((tab) => (
+            <button
+              key={tab}
+              className={`tab-btn${activeTab === tab ? " active" : ""}`}
+              onClick={() => setActiveTab(tab)}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+        <div ref={logRef} className="detail-log-pane">
+          {logs[activeTab].length === 0
+            ? <span className="log-empty">— no output —</span>
+            : logs[activeTab].map((line, i) => <div key={i} className="log-line">{line}</div>)
+          }
+        </div>
       </div>
     </div>
   );
