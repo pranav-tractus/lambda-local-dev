@@ -82,7 +82,7 @@ async def _read_stream(name: str, process_type: str, stream: asyncio.StreamReade
             await q.put(msg)
 
 
-async def _start_service(name: str, svc: dict, env_vars: dict) -> None:
+async def _start_sam_and_proxy(name: str, svc: dict, env_vars: dict) -> None:
     base_env = os.environ.copy()
     base_env.update(env_vars)
 
@@ -114,6 +114,19 @@ async def _start_service(name: str, svc: dict, env_vars: dict) -> None:
         env=proxy_env,
     )
 
+    PROCS[name]["sam"] = sam_proc
+    PROCS[name]["proxy"] = proxy_proc
+    asyncio.create_task(_read_stream(name, "sam", sam_proc.stdout))
+    asyncio.create_task(_read_stream(name, "proxy", proxy_proc.stdout))
+
+
+async def _start_service(name: str, svc: dict, env_vars: dict) -> None:
+    await _start_sam_and_proxy(name, svc, env_vars)
+
+    base_env = os.environ.copy()
+    base_env.update(env_vars)
+    proxy_port = svc["proxy_port"]
+
     tunnel_proc = await asyncio.create_subprocess_exec(
         "cloudflared", "tunnel", "--url", f"http://localhost:{proxy_port}",
         stdout=asyncio.subprocess.PIPE,
@@ -121,26 +134,44 @@ async def _start_service(name: str, svc: dict, env_vars: dict) -> None:
         env=base_env,
     )
 
-    PROCS[name] = {"sam": sam_proc, "proxy": proxy_proc, "tunnel": tunnel_proc}
-    asyncio.create_task(_read_stream(name, "sam", sam_proc.stdout))
-    asyncio.create_task(_read_stream(name, "proxy", proxy_proc.stdout))
+    PROCS[name]["tunnel"] = tunnel_proc
     asyncio.create_task(_read_stream(name, "tunnel", tunnel_proc.stdout))
 
 
+async def _stop_sam_and_proxy(name: str) -> None:
+    procs_to_stop = [PROCS[name].pop("sam", None), PROCS[name].pop("proxy", None)]
+    for proc in procs_to_stop:
+        if proc:
+            try:
+                proc.terminate()
+            except ProcessLookupError:
+                pass
+    for proc in procs_to_stop:
+        if proc:
+            try:
+                await asyncio.wait_for(proc.wait(), timeout=5.0)
+            except asyncio.TimeoutError:
+                try:
+                    proc.kill()
+                except ProcessLookupError:
+                    pass
+
+
 async def _stop_service(name: str) -> None:
-    procs = PROCS.pop(name, {})
+    await _stop_sam_and_proxy(name)
+
+    tunnel_proc = PROCS[name].pop("tunnel", None)
     TUNNEL_URLS.pop(name, None)
-    for proc in procs.values():
+    if tunnel_proc:
         try:
-            proc.terminate()
+            tunnel_proc.terminate()
         except ProcessLookupError:
             pass
-    for proc in procs.values():
         try:
-            await asyncio.wait_for(proc.wait(), timeout=5.0)
+            await asyncio.wait_for(tunnel_proc.wait(), timeout=5.0)
         except asyncio.TimeoutError:
             try:
-                proc.kill()
+                tunnel_proc.kill()
             except ProcessLookupError:
                 pass
 
@@ -152,19 +183,35 @@ def _find_service(name: str) -> Optional[dict]:
     return None
 
 
+async def _restart_service_components(name: str, restart_all: bool = False) -> None:
+    svc = _find_service(name)
+    if not svc:
+        raise ValueError(f"Unknown service: {name}")
+
+    env_vars = load_env()
+
+    if restart_all:
+        await _stop_service(name)
+        await _start_service(name, svc, env_vars)
+    else:
+        await _stop_sam_and_proxy(name)
+        await _start_sam_and_proxy(name, svc, env_vars)
+
+
 @app.post("/api/services/{name}/start")
-async def start_service(name: str):
+async def start_service_endpoint(name: str):
     svc = _find_service(name)
     if not svc:
         return JSONResponse({"error": f"Unknown service: {name}"}, status_code=404)
     if get_status(name) == "running":
         return {"ok": True, "note": "already running"}
+    PROCS[name] = {}
     await _start_service(name, svc, load_env())
     return {"ok": True}
 
 
 @app.post("/api/services/{name}/stop")
-async def stop_service(name: str):
+async def stop_service_endpoint(name: str):
     svc = _find_service(name)
     if not svc:
         return JSONResponse({"error": f"Unknown service: {name}"}, status_code=404)
@@ -173,12 +220,20 @@ async def stop_service(name: str):
 
 
 @app.post("/api/services/{name}/restart")
-async def restart_service(name: str):
+async def restart_service_endpoint(name: str):
     svc = _find_service(name)
     if not svc:
         return JSONResponse({"error": f"Unknown service: {name}"}, status_code=404)
-    await _stop_service(name)
-    await _start_service(name, svc, load_env())
+    await _restart_service_components(name, restart_all=True)
+    return {"ok": True}
+
+
+@app.post("/api/services/{name}/restart-sam-only")
+async def restart_sam_only_endpoint(name: str):
+    svc = _find_service(name)
+    if not svc:
+        return JSONResponse({"error": f"Unknown service: {name}"}, status_code=404)
+    await _restart_service_components(name, restart_all=False)
     return {"ok": True}
 
 
