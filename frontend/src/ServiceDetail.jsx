@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import { CopyIcon } from "./components/icons";
+import RestartButton from "./components/RestartButton.jsx";
 
 const TABS = ["sam", "proxy", "tunnel", "build"];
 
-export default function ServiceDetail({ service, onBack, onStart, onStop, onRestart, onBuild, onClean, onKillPorts }) {
+export default function ServiceDetail({ service, onBack, onStart, onStop, onRestart, onRestartSamProxy, onBuild, onClean, onKillPorts }) {
   const { name, sam_port, proxy_port, status, tunnel_url } = service;
   const [activeTab, setActiveTab] = useState("sam");
   const [logs, setLogs] = useState({ sam: [], proxy: [], tunnel: [], build: [] });
@@ -63,7 +64,11 @@ export default function ServiceDetail({ service, onBack, onStart, onStop, onRest
       <div className="detail-actions">
         <button className="btn btn-start" disabled={disabled} onClick={onStart}>Start</button>
         <button className="btn" disabled={disabled} onClick={onStop}>Stop</button>
-        <button className="btn" disabled={disabled} onClick={onRestart}>Restart</button>
+        <RestartButton
+          onRestartAll={onRestart}
+          onRestartSamProxy={onRestartSamProxy}
+          disabled={disabled}
+        />
         <button className="btn" disabled={disabled} onClick={onBuild}>
           {status === "building" ? "Building…" : "Build"}
         </button>
