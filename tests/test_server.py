@@ -150,3 +150,83 @@ async def test_kill_ports_logs_emitted(monkeypatch, tmp_path):
         await asyncio.sleep(0)  # drain inside the patch so the background task runs with the mock
     assert resp.status_code == 200
     assert {"process": "build", "line": "killed port 3001 8080"} in list(server.LOG_BUFFER["email-bot"])
+
+
+@pytest.mark.anyio
+async def test_restart_service_only_sam_retains_tunnel_url(monkeypatch, tmp_path):
+    _setup_files(tmp_path, monkeypatch)
+    import importlib, sys
+    sys.modules.pop("server", None)
+    import server
+    importlib.reload(server)
+
+    class MockStreamReader:
+        def __init__(self, lines):
+            self._lines = lines
+            self._index = 0
+
+        async def readline(self):
+            if self._index < len(self._lines):
+                line = self._lines[self._index]
+                self._index += 1
+                return line
+            return b'' # EOF
+
+    # Mock subprocess execution for SAM, proxy, and tunnel
+    mock_sam_proc = AsyncMock()
+    mock_sam_proc.stdout = MockStreamReader([b"SAM output\n"])
+    mock_sam_proc.wait = AsyncMock(return_value=0)
+    mock_sam_proc.terminate = MagicMock()
+    mock_sam_proc.kill = MagicMock()
+
+    mock_proxy_proc = AsyncMock()
+    mock_proxy_proc.stdout = MockStreamReader([b"Proxy output\n"])
+    mock_proxy_proc.wait = AsyncMock(return_value=0)
+    mock_proxy_proc.terminate = MagicMock()
+    mock_proxy_proc.kill = MagicMock()
+
+    mock_tunnel_proc = AsyncMock()
+    mock_tunnel_proc.stdout = MockStreamReader([
+        b"cloudflared output: https://test-tunnel.trycloudflare.com\n"
+    ])
+    mock_tunnel_proc.wait = AsyncMock(return_value=0)
+    mock_tunnel_proc.terminate = MagicMock()
+    mock_tunnel_proc.kill = MagicMock()
+
+    # Use a side effect to return different mocks for different commands
+    def fake_exec(*args, **kwargs):
+        command = args[0]
+        if "sam" in command:
+            return mock_sam_proc
+        elif "python3" in command and "proxy.py" in args[1]:
+            return mock_proxy_proc
+        elif "cloudflared" in command:
+            return mock_tunnel_proc
+        raise ValueError(f"Unexpected command: {command}")
+
+    with patch("asyncio.create_subprocess_exec", side_effect=fake_exec) as mock_create_subprocess_exec:
+        async with AsyncClient(transport=ASGITransport(app=server.app), base_url="http://test") as ac:
+            # 1. Start the service initially
+            resp = await ac.post("/api/services/email-bot/start")
+            assert resp.status_code == 200
+            await asyncio.sleep(0.1) # Allow background tasks to run
+            initial_tunnel_url = server.TUNNEL_URLS.get("email-bot")
+            assert initial_tunnel_url == "https://test-tunnel.trycloudflare.com"
+
+            # Reset mocks for restart, but keep tunnel mock state
+            mock_create_subprocess_exec.reset_mock()
+            mock_sam_proc.reset_mock()
+            mock_proxy_proc.reset_mock()
+            mock_tunnel_proc.reset_mock()
+
+            # 2. Call the new restart-sam-only endpoint
+            resp = await ac.post("/api/services/email-bot/restart-sam-only")
+            assert resp.status_code == 200
+            await asyncio.sleep(0.1) # Allow background tasks to run
+
+            # Assert that SAM and proxy were restarted (stopped and started)
+            # The mock_create_subprocess_exec should have been called twice: once for sam, once for proxy
+            assert mock_create_subprocess_exec.call_count == 2
+            # Assert that the tunnel URL remains the same
+            current_tunnel_url = server.TUNNEL_URLS.get("email-bot")
+            assert current_tunnel_url == initial_tunnel_url

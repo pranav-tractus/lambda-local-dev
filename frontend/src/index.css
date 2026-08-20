@@ -521,3 +521,48 @@ button {
   background: var(--border);
   border-radius: 2px;
 }
+
+/* ── restart dropdown ────────────────────────────────── */
+.restart-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.restart-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 100;
+  min-width: 170px;
+  background: var(--surface-hi);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  padding: 4px 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.restart-dropdown-item {
+  background: transparent;
+  border: none;
+  color: var(--text-2);
+  padding: 6px 12px;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.restart-dropdown-item:hover {
+  background: var(--amber-dim);
+  color: var(--amber);
+}
+
+.restart-dropdown-item:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
